@@ -1,0 +1,117 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My E-Commerce Store</title>
+</head>
+<body>
+
+<h1>Online Shopping</h1>
+
+<h2>Products</h2>
+<div id="products"></div>
+
+<h2>Shopping Cart</h2>
+<div id="cart"></div>
+<button onclick="checkout()">Buy Now</button>
+
+<h2>Seller Panel</h2>
+<input id="name" placeholder="Product Name">
+<input id="price" type="number" placeholder="Price">
+<button onclick="addProduct()">Add Product</button>
+
+<h2>Successful Orders</h2>
+<div id="orders"></div>
+
+<script>
+    let cart = [];
+
+    async function loadProducts() {
+        let res = await fetch("/products");
+        let data = await res.json();
+
+        document.getElementById("products").innerHTML =
+            data.map(p => `
+                <div>
+                    <h3>${p.name}</h3>
+                    <p>Price: ${p.price}</p>
+                    <button onclick="addToCart(${p.id})">Add to Cart</button>
+                    <button onclick="editProduct(${p.id})">Edit</button>
+                </div>
+            `).join("");
+    }
+
+    function addToCart(id) {
+        cart.push(id);
+        showCart();
+    }
+
+    function showCart() {
+        document.getElementById("cart").innerText =
+            "Items in cart: " + cart.length;
+    }
+
+    async function checkout() {
+        if (cart.length === 0) {
+            alert("Your cart is empty!");
+            return;
+        }
+
+        let res = await fetch("/orders", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ items: cart })
+        });
+
+        let order = await res.json();
+
+        alert("Order placed! Demo checkout successful.");
+        cart = [];
+        showCart();
+        loadOrders();
+    }
+
+    async function addProduct() {
+        await fetch("/products", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                name: document.getElementById("name").value,
+                price: document.getElementById("price").value
+            })
+        });
+
+        loadProducts();
+    }
+
+    async function editProduct(id) {
+        let name = prompt("Enter new product name");
+        let price = prompt("Enter new price");
+
+        if (name === null || price === null) return;
+
+        await fetch("/products/" + id, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name, price })
+        });
+
+        loadProducts();
+    }
+
+    async function loadOrders() {
+        let res = await fetch("/orders");
+        let data = await res.json();
+
+        document.getElementById("orders").innerHTML =
+            data.map(o => `
+                <p>Order ID: ${o.id} - ${o.status}</p>
+            `).join("");
+    }
+
+    loadProducts();
+    loadOrders();
+</script>
+
+</body>
+</html>
